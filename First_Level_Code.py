@@ -58,6 +58,8 @@ def assign_first_code(sheet_data):
     :param sheet_data: Sheet data extracted via read_first_sheet().
     :return: code_legend and code_sheet
     """
+
+    stop = stopwords.words('english')
     pattern = re.compile('[\W_]+')
     term_list = collections.OrderedDict()
     code_sheet = []
@@ -70,7 +72,9 @@ def assign_first_code(sheet_data):
                 word = pattern.sub(' ',word)
                 word = word.split()
                 for w in word:
-                    if len(w)<=1:
+                    if len(w)<=2:
+                        continue
+                    if w in stop:
                         continue
                     if w not in term_list:
                         term_list[w] = "A"+str(count)

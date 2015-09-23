@@ -59,7 +59,13 @@ def extract_terms(phrase):
     :return: list of non-stop words in phrase
     """
     stop = stopwords.words('english')
-    return [i for i in phrase.split() if i not in stop]
+    temp = [i for i in phrase.split() if i not in stop]
+    return [i for i in temp if not has_numbers(i)]
+
+
+def has_numbers(input_string):
+    return any(char.isdigit() for char in input_string)
+
 
 #------------------------------------------------------
 
@@ -100,14 +106,3 @@ if __name__ == "__main__":
 
         workbookOut.save(file_name[:len(file_name)-5]+"."+new_book_data[0][0]+".xls")
         col_val_index += 1
-
-
-
-
-
-
-
-
-
-
-
