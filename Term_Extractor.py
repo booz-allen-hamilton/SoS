@@ -17,6 +17,8 @@ from topia.termextract import tag
 from topia.termextract import extract
 from nltk.corpus import stopwords
 from xlwt import *
+import re
+import csv
 
 
 def get_sys_values(file_name):
@@ -30,7 +32,8 @@ def get_sys_values(file_name):
 
     return sys_names
 
-def get_col_values(col_name,file_name):
+
+def get_col_values(col_name, file_name):
     """
     Gets values for a desired column from the master file
     :param col_name: column of interest
@@ -50,7 +53,7 @@ def get_col_values(col_name,file_name):
     print "Enter a valid column name!"
     return
 
-def extract_terms(phrase):
+def extract_terms(phrase,key_terms):
     """
     Initially intended to use NLP (POS recognition) for term extraction. However, as many terms are not
     structured like text, better extraction is achieved by extracting all words and removing stop words with
@@ -58,13 +61,30 @@ def extract_terms(phrase):
     :param phrase:
     :return: list of non-stop words in phrase
     """
+
+    temp_terms = []
+
+    pattern = re.compile('[\W_]+')
+    phrase = pattern.sub(" ",phrase)
+    phrase = phrase.lower()
+    for term in key_terms:
+        condition = True
+        for i in term:
+            if i not in phrase:
+                condition = False
+        if condition:
+            temp_terms.append(" ".join(term))
+
+    temp_check = " ".join(temp_terms)
+    #Perform text filtering here.
     stop = stopwords.words('english')
     temp = [i for i in phrase.split() if i not in stop]
-    return [i for i in temp if not has_numbers(i)]
+    temp = [i for i in temp if not i.isdigit()]
+    temp = [i for i in temp if len(i) > 2]
+    temp = [i for i in temp if i not in temp_check]
+    temp_terms = temp_terms + temp
 
-
-def has_numbers(input_string):
-    return any(char.isdigit() for char in input_string)
+    return temp_terms
 
 
 #------------------------------------------------------
@@ -76,33 +96,19 @@ if __name__ == "__main__":
     for arg in sys.argv[2:]:
         col_values.append(get_col_values(arg,file_name))
 
+    key_terms = get_sys_values("healthmap_codes.xls")
+    key_terms = [i.split() for i in key_terms]
+
     processed_data = []
-    processed_single_col=[]
+    processed_single_col = []
     for single_col in col_values:
         for single_phrase in single_col:
-            processed_single_col.append(extract_terms(single_phrase))
+            processed_single_col.append(extract_terms(single_phrase, key_terms))
         processed_data.append(processed_single_col)
         processed_single_col = []
 
-    col_val_index = 0
     for new_book_data in processed_data:
-        workbookOut = Workbook()
-        sheet1 = workbookOut.add_sheet("Extracted Terms")
-
-        row_c = 0
-        col_c = 2
-        for sys_terms in new_book_data[1:len(new_book_data)]:
-            sheet1.write(row_c, 0, sys_values[row_c+1])
-            for w in sys_terms:
-                sheet1.write(row_c, col_c, w)
-                col_c += 1
-            col_c = 2
-            row_c += 1
-
-        row_c = 0
-        for col in col_values[col_val_index][1:len(col_values[col_val_index])]:
-            sheet1.write(row_c, 1, col_values[col_val_index][row_c+1])
-            row_c += 1
-
-        workbookOut.save(file_name[:len(file_name)-5]+"."+new_book_data[0][0]+".xls")
-        col_val_index += 1
+        with open(file_name[:len(file_name)-5]+"."+new_book_data[0][0]+".csv",'wb') as csvfile:
+            workbookOut = csv.writer(csvfile)
+            for row in new_book_data[1:len(new_book_data)]:
+                workbookOut.writerow(row)

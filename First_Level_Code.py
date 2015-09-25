@@ -22,32 +22,25 @@ from xlrd import *
 from xlwt import *
 import collections
 import re
+import csv
 from nltk.corpus import stopwords
 
 
-def read_first_sheet(file_name):
+def read_first_sheet(master_file_name,file_name):
     """
     Reads first sheet of given .xlsx file.
     :param file_name: Name of .xlsx file.
     :return: temp_sheet: text processed contents of first sheet. Row is system, column is term.
             surv_names: names of the surveillance systems
     """
-    stop = stopwords.words('english')
-    current_book = open_workbook(file_name)
-    active_sheet = current_book.sheet_by_index(0)
     temp_sheet_data = []
-    for rowNum in range(0, active_sheet.nrows):
-        temp_row = []
-        for colNum in range(2, active_sheet.ncols):
-            try:
-                temp_term = active_sheet.cell_value(rowNum, colNum).encode('ascii', 'ignore').lower().strip()
-                if temp_term != "":
-                    if temp_term not in stop:
-                        if not temp_term.isdigit():
-                            temp_row.append(temp_term)
-            except UnicodeEncodeError as e:
-                pass
-        temp_sheet_data.append(temp_row)
+    with open(file_name,'rb') as csvfile:
+        sheet_reader = csv.reader(csvfile)
+        for row in sheet_reader:
+            temp_sheet_data.append(row)
+
+    master_book = open_workbook(master_file_name)
+    active_sheet = master_book.sheet_by_index(0)
     surv_names = active_sheet.col_values(0)
 
     return temp_sheet_data,surv_names
@@ -66,20 +59,16 @@ def assign_first_code(sheet_data):
     count = 1
     for row in sheet_data:
         temp_list = []
-        for i in range(0, len(row)):
-            word_parse = row[i].split()
-            for word in word_parse:
-                word = pattern.sub(' ',word)
-                word = word.split()
-                for w in word:
-                    if len(w)<=2:
-                        continue
-                    if w in stop:
-                        continue
-                    if w not in term_list:
-                        term_list[w] = "A"+str(count)
-                        count += 1
-                    temp_list.append(term_list[w])
+        for word in row:
+            word = pattern.sub(' ',word).strip()
+            if len(word)<=2:
+                continue
+            if word in stop:
+                continue
+            if word not in term_list:
+                term_list[word] = "A"+str(count)
+                count += 1
+            temp_list.append(term_list[word])
         code_sheet.append(temp_list)
 
     return code_sheet,term_list
@@ -89,9 +78,10 @@ def assign_first_code(sheet_data):
 
 if __name__ == "__main__":
     try:
-        for arg in sys.argv[1:]:
+        master_name = sys.argv[1]
+        for arg in sys.argv[2:]:
             doc_name = arg
-            sheet_data,surv_names = read_first_sheet(doc_name)
+            sheet_data,surv_names = read_first_sheet(master_name,doc_name)
 
             sheet_code,term_list = assign_first_code(sheet_data)
 
