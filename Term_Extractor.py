@@ -5,7 +5,7 @@
     input: Arguments from the command line. First Argument is the file name. Next arguments are the names of the columns
     for processing.
 
-    output: Multiple .xls files. File names are "*Column*.terms.xls".
+    output: Multiple .csv files. File names are "*Column*.terms.csv".
 
     Nick Phillips - 2015
     phillips_nicholas@bah.com
@@ -40,6 +40,7 @@ def get_col_values(col_name, file_name):
     :param file_name: name of master file
     :return: List of column data, if found. Nothing otherwise.
     """
+    print col_name
     current_book = open_workbook(file_name)
     active_sheet = current_book.sheet_by_index(0)
     row = active_sheet.row_values(0)
@@ -63,6 +64,8 @@ def extract_terms(phrase,key_terms):
     """
 
     temp_terms = []
+    if not isinstance(phrase,basestring):
+        return "NULL"
 
     pattern = re.compile('[\W_]+')
     phrase = pattern.sub(" ",phrase)
@@ -75,16 +78,28 @@ def extract_terms(phrase,key_terms):
         if condition:
             temp_terms.append(" ".join(term))
 
+    #read extra stop words from first column of file
+    extra_stop_words = []
+    with open('extra_stop_words.csv') as csv_file:
+        csv_reader = csv.reader(csv_file)
+        #append all extra stop words to list.
+        for row in csv_reader:
+            extra_stop_words.append(row[0])
+
     temp_check = " ".join(temp_terms)
     #Perform text filtering here.
     stop = stopwords.words('english')
+    stop = stop + extra_stop_words
     temp = [i for i in phrase.split() if i not in stop]
     temp = [i for i in temp if not i.isdigit()]
-    temp = [i for i in temp if len(i) > 2]
+    #temp = [i for i in temp if len(i) > 2]
     temp = [i for i in temp if i not in temp_check]
     temp_terms = temp_terms + temp
 
-    return temp_terms
+    #remove duplicates
+    output = set(temp_terms)
+
+    return list(output)
 
 
 #------------------------------------------------------
